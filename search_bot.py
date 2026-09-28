@@ -47,6 +47,10 @@ AFTER_GO_TO_DELAY = 3.0
 # SELECCIÓN DE EVENTO
 # ============================================================
 
+# True  -> farmear desde Events y atacar 5 veces por objetivo.
+# False -> usar búsqueda directa y atacar 1 vez por objetivo.
+FARM_EVENT = True
+
 # Evento que queremos farmear, contando de arriba hacia abajo.
 EVENT_NUMBER = 1
 
@@ -100,6 +104,14 @@ AFTER_MARCH_DELAY = 1.5
 
 # Cantidad exacta de ataques que debe recibir cada enemigo.
 ATTACKS_PER_ENEMY = 5
+
+
+def attacks_per_enemy():
+    return (
+        ATTACKS_PER_ENEMY
+        if FARM_EVENT
+        else 1
+    )
 
 # Ventana que aparece cuando todas las marchas están ocupadas.
 NO_MARCH_TEMPLATE = "no_march.png"
@@ -529,6 +541,7 @@ def attack_enemy_until_complete(
     """
 
     attacks_done = 0
+    target_attacks = attacks_per_enemy()
     first_target_position_used = False
 
     print()
@@ -536,18 +549,18 @@ def attack_enemy_until_complete(
     print(" INICIANDO CICLO DE ATAQUES")
     print("==========================")
     print(
-        f"Objetivo: {ATTACKS_PER_ENEMY} ataques"
+        f"Objetivo: {target_attacks} ataques"
     )
     print()
 
-    while attacks_done < ATTACKS_PER_ENEMY:
+    while attacks_done < target_attacks:
 
         attack_number = attacks_done + 1
 
         print(
             f"→ Intentando ataque "
             f"{attack_number}/"
-            f"{ATTACKS_PER_ENEMY}"
+            f"{target_attacks}"
         )
 
         # El primer ataque usa Y=320 porque acabamos
@@ -583,7 +596,7 @@ def attack_enemy_until_complete(
             )
             print(
                 f"Ataques completados en este objetivo: "
-                f"{attacks_done}/{ATTACKS_PER_ENEMY}"
+                f"{attacks_done}/{target_attacks}"
             )
             print()
 
@@ -600,13 +613,13 @@ def attack_enemy_until_complete(
             print()
             print(
                 f"✓ ATAQUE {attacks_done}/"
-                f"{ATTACKS_PER_ENEMY} ENVIADO"
+                f"{target_attacks} ENVIADO"
             )
             print()
 
             # Si todavía faltan ataques, volvemos a seleccionar
             # exactamente el mismo enemigo.
-            if attacks_done < ATTACKS_PER_ENEMY:
+            if attacks_done < target_attacks:
 
                 time.sleep(1.0)
 
@@ -621,7 +634,7 @@ def attack_enemy_until_complete(
             print()
             print(
                 f"⏳ Ataque {attacks_done + 1}/"
-                f"{ATTACKS_PER_ENEMY} pendiente."
+                f"{target_attacks} pendiente."
             )
 
             print(
@@ -647,7 +660,7 @@ def attack_enemy_until_complete(
             print("==========================")
             print(
                 f"El ataque {attacks_done + 1}/"
-                f"{ATTACKS_PER_ENEMY} NO fue contado."
+                f"{target_attacks} NO fue contado."
             )
             print(
                 "→ Regresando al controlador principal "
@@ -661,7 +674,7 @@ def attack_enemy_until_complete(
     print("==========================")
     print(
         f" ✓ OBJETIVO COMPLETADO "
-        f"({attacks_done}/{ATTACKS_PER_ENEMY})"
+        f"({attacks_done}/{target_attacks})"
     )
     print("==========================")
     print()
@@ -850,8 +863,8 @@ def move_map(direction):
 
 def open_search():
     """
-    Abre el buscador de eventos y selecciona el evento
-    configurado en EVENT_NUMBER.
+    Abre el buscador. Si FARM_EVENT está activo, entra a Events
+    y selecciona el evento configurado en EVENT_NUMBER.
 
     El nivel NO se modifica. Se utiliza el último nivel
     seleccionado manualmente por el usuario.
@@ -866,7 +879,10 @@ def open_search():
     # VALIDAR EVENTO
     # --------------------------------------------------------
 
-    if EVENT_NUMBER < 1 or EVENT_NUMBER > 4:
+    if FARM_EVENT and (
+        EVENT_NUMBER < 1
+        or EVENT_NUMBER > 4
+    ):
         raise ValueError(
             "Por ahora EVENT_NUMBER debe estar entre 1 y 4."
         )
@@ -884,32 +900,40 @@ def open_search():
 
     time.sleep(AFTER_COMPASS_DELAY)
 
-    # --------------------------------------------------------
-    # ABRIR EVENTS
-    # --------------------------------------------------------
+    if FARM_EVENT:
 
-    print("→ Abriendo Events...")
+        # ----------------------------------------------------
+        # ABRIR EVENTS
+        # ----------------------------------------------------
 
-    tap(EVENTS_X, EVENTS_Y)
+        print("→ Abriendo Events...")
 
-    time.sleep(AFTER_EVENTS_DELAY)
+        tap(EVENTS_X, EVENTS_Y)
 
-    # --------------------------------------------------------
-    # SELECCIONAR EVENTO
-    # --------------------------------------------------------
-    if EVENT_NUMBER == 4:
-	    print ("Evento 4 seleccionado_ desplazando evento")
-	    swipe (EVENT_SCROLL_X, EVENT_SCROLL_START_Y, EVENT_SCROLL_X, EVENT_SCROLL_END_Y, 500)
-	    time.sleep(AFTER_EVENT_SCROLL_DELAY)
+        time.sleep(AFTER_EVENTS_DELAY)
 
-	    #despues del scroll visualiza la posicion del evento3
-	    event_y = EVENT_FIRST_Y + (2 * EVENT_SPACING_Y)
+        # ----------------------------------------------------
+        # SELECCIONAR EVENTO
+        # ----------------------------------------------------
+        if EVENT_NUMBER == 4:
+            print ("Evento 4 seleccionado_ desplazando evento")
+            swipe (EVENT_SCROLL_X, EVENT_SCROLL_START_Y, EVENT_SCROLL_X, EVENT_SCROLL_END_Y, 500)
+            time.sleep(AFTER_EVENT_SCROLL_DELAY)
+
+            #despues del scroll visualiza la posicion del evento3
+            event_y = EVENT_FIRST_Y + (2 * EVENT_SPACING_Y)
+        else:
+            event_y= (EVENT_FIRST_Y + (EVENT_NUMBER -1) * EVENT_SPACING_Y)
+        print(f"->seleccionado evento {EVENT_NUMBER}")
+
+        tap(EVENT_X, event_y)
+        time.sleep(AFTER_EVENT_SELECT_DELAY)
     else:
-	    event_y= (EVENT_FIRST_Y + (EVENT_NUMBER -1) * EVENT_SPACING_Y)
-    print(f"->seleccionado evento {EVENT_NUMBER}")
 
-    tap(EVENT_X, event_y)
-    time.sleep(AFTER_EVENT_SELECT_DELAY)
+        print(
+            "→ FARM_EVENT desactivado. "
+            "Saltando selección de Events."
+        )
 
 
     # --------------------------------------------------------
@@ -1067,7 +1091,7 @@ def main():
                 if result == "COMPLETE":
 
                     print(
-                        f"✓ Los {ATTACKS_PER_ENEMY} ataques "
+                        f"✓ Los {attacks_per_enemy()} ataques "
                         f"fueron completados."
                     )
 
@@ -1147,7 +1171,7 @@ def main():
                 if result == "COMPLETE":
 
                     print(
-                        f"✓ Los {ATTACKS_PER_ENEMY} ataques "
+                        f"✓ Los {attacks_per_enemy()} ataques "
                         f"fueron completados."
                     )
 
