@@ -1,5 +1,7 @@
 import subprocess
 import time
+import urllib.error
+import urllib.request
 
 import cv2
 import numpy as np
@@ -24,6 +26,46 @@ TEMPLATES = {
     "NEXT": "next.png",
     "MOVE_CAMERA": "move_camera.png",
 }
+
+# ============================================================
+# NOTIFICACIONES
+# ============================================================
+
+NTFY_TOPIC = "gotc_bot_notificatios_123456789"
+NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
+NTFY_TIMEOUT = 5
+
+
+def send_ntfy_notification(title, message):
+    """
+    Publica una notificación simple en ntfy.
+
+    Los errores de red no deben detener el bot.
+    """
+
+    request = urllib.request.Request(
+        NTFY_URL,
+        data=message.encode("utf-8"),
+        method="POST",
+        headers={
+            "Title": title,
+            "Priority": "default",
+            "Tags": "video_game",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(
+            request,
+            timeout=NTFY_TIMEOUT
+        ) as response:
+            response.read()
+
+    except urllib.error.URLError as error:
+        print(
+            "⚠ No se pudo enviar notificación ntfy: "
+            f"{error}"
+        )
 
 # Máximo de movimientos de cámara antes de abandonar
 MAX_MOVES = 40
@@ -956,7 +998,7 @@ def open_search():
 # BOT
 # ============================================================
 
-def main():
+def run_bot():
 
     print()
     print("==========================")
@@ -1330,6 +1372,23 @@ def main():
         print()
         print(
             "Detenido manualmente con CTRL+C."
+        )
+
+
+
+def main():
+    send_ntfy_notification(
+        "GOTC bot iniciado",
+        "El bot GOTC acaba de iniciar."
+    )
+
+    try:
+        run_bot()
+
+    finally:
+        send_ntfy_notification(
+            "GOTC bot detenido",
+            "El bot GOTC se detuvo."
         )
 
 
