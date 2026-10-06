@@ -544,6 +544,9 @@ criatura.
 Ejemplo conceptual de configuración:
 
 ``` python
+FARM_EVENT = True
+ELITE_CREATURE = False
+
 ATTACKS_PER_ENEMY = 5
 EVENT_NUMBER = 1
 
@@ -564,9 +567,34 @@ MARCH_RETRY_DELAY = 20.0
 
 ### `ATTACKS_PER_ENEMY`
 
-Número exacto de ataques enviados a cada criatura.
+Número exacto de ataques enviados a cada criatura cuando
+`FARM_EVENT = True`.
 
 El contador solo aumenta después de confirmar correctamente **MARCH**.
+
+### `FARM_EVENT`
+
+Define el modo de búsqueda:
+
+``` text
+True  = buscar desde Events y atacar ATTACKS_PER_ENEMY veces
+False = usar búsqueda directa
+```
+
+Cuando `FARM_EVENT = False`, el número de ataques ya no sale de
+`ATTACKS_PER_ENEMY`; depende de `ELITE_CREATURE`.
+
+### `ELITE_CREATURE`
+
+Solo aplica cuando `FARM_EVENT = False`.
+
+``` text
+True  = criatura elite, 4 ataques exactos
+False = criatura normal, 1 ataque exacto
+```
+
+Si `FARM_EVENT = True`, esta variable no cambia la cantidad de ataques:
+se mantienen los ataques configurados por `ATTACKS_PER_ENEMY`.
 
 ### `EVENT_NUMBER`
 
@@ -764,6 +792,15 @@ event_y = EVENT_FIRST_Y + (2 * EVENT_SPACING_Y)
 ------------------------------------------------------------------------
 
 ## 17. Ciclo de ataque
+
+Antes de iniciar el ciclo, el bot calcula la cantidad exacta con
+`attacks_per_enemy()`:
+
+``` text
+FARM_EVENT=True                         -> ATTACKS_PER_ENEMY
+FARM_EVENT=False, ELITE_CREATURE=True   -> 4
+FARM_EVENT=False, ELITE_CREATURE=False  -> 1
+```
 
 Después de centrar una criatura:
 
@@ -1019,12 +1056,14 @@ Antes de iniciar una sesión:
 4.  Asegurarse de que la cuenta está en un estado normal para atacar.
 5.  Seleccionar manualmente al menos una vez el nivel de criatura que se
     desea farmear.
-6.  Configurar `EVENT_NUMBER`.
-7.  Configurar `ATTACKS_PER_ENEMY`.
-8.  Verificar que la stamina disponible sea la que se desea gastar.
-9.  Verificar que todos los templates PNG correspondan a la interfaz
+6.  Configurar `FARM_EVENT`.
+7.  Si `FARM_EVENT = True`, configurar `ATTACKS_PER_ENEMY` y
+    `EVENT_NUMBER`.
+8.  Si `FARM_EVENT = False`, configurar `ELITE_CREATURE`.
+9.  Verificar que la stamina disponible sea la que se desea gastar.
+10. Verificar que todos los templates PNG correspondan a la interfaz
     actual.
-10. Activar el entorno virtual.
+11. Activar el entorno virtual.
 
 Ejecutar:
 
