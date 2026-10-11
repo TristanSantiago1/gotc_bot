@@ -547,7 +547,7 @@ Ejemplo conceptual de configuración:
 FARM_EVENT = True
 ELITE_CREATURE = False
 
-ATTACKS_PER_ENEMY = 5
+NUM_ATTACKS = 5
 EVENT_NUMBER = 1
 
 MAX_MOVES = 40
@@ -565,10 +565,12 @@ STOP_THRESHOLD = 0.90
 MARCH_RETRY_DELAY = 20.0
 ```
 
-### `ATTACKS_PER_ENEMY`
+### `NUM_ATTACKS`
 
-Número exacto de ataques enviados a cada criatura cuando
-`FARM_EVENT = True`.
+Número exacto de ataques enviados a cada criatura.
+
+Aplica siempre, sin importar si `FARM_EVENT = True` o `False`, y sin
+importar si `ELITE_CREATURE = True` o `False`.
 
 El contador solo aumenta después de confirmar correctamente **MARCH**.
 
@@ -577,24 +579,24 @@ El contador solo aumenta después de confirmar correctamente **MARCH**.
 Define el modo de búsqueda:
 
 ``` text
-True  = buscar desde Events y atacar ATTACKS_PER_ENEMY veces
+True  = buscar desde Events
 False = usar búsqueda directa
 ```
 
-Cuando `FARM_EVENT = False`, el número de ataques ya no sale de
-`ATTACKS_PER_ENEMY`; depende de `ELITE_CREATURE`.
+La cantidad de ataques no depende de este modo; siempre sale de
+`NUM_ATTACKS`.
 
 ### `ELITE_CREATURE`
 
-Solo aplica cuando `FARM_EVENT = False`.
+Marca si la criatura buscada es elite.
 
 ``` text
-True  = criatura elite, 4 ataques exactos
-False = criatura normal, 1 ataque exacto
+True  = criatura elite
+False = criatura normal
 ```
 
-Si `FARM_EVENT = True`, esta variable no cambia la cantidad de ataques:
-se mantienen los ataques configurados por `ATTACKS_PER_ENEMY`.
+Esta variable no cambia la cantidad de ataques; los ataques configurados
+salen siempre de `NUM_ATTACKS`.
 
 ### `EVENT_NUMBER`
 
@@ -797,9 +799,7 @@ Antes de iniciar el ciclo, el bot calcula la cantidad exacta con
 `attacks_per_enemy()`:
 
 ``` text
-FARM_EVENT=True                         -> ATTACKS_PER_ENEMY
-FARM_EVENT=False, ELITE_CREATURE=True   -> 4
-FARM_EVENT=False, ELITE_CREATURE=False  -> 1
+NUM_ATTACKS -> cantidad exacta de ataques por criatura
 ```
 
 Después de centrar una criatura:
@@ -1057,13 +1057,14 @@ Antes de iniciar una sesión:
 5.  Seleccionar manualmente al menos una vez el nivel de criatura que se
     desea farmear.
 6.  Configurar `FARM_EVENT`.
-7.  Si `FARM_EVENT = True`, configurar `ATTACKS_PER_ENEMY` y
-    `EVENT_NUMBER`.
-8.  Si `FARM_EVENT = False`, configurar `ELITE_CREATURE`.
-9.  Verificar que la stamina disponible sea la que se desea gastar.
-10. Verificar que todos los templates PNG correspondan a la interfaz
+7.  Configurar `NUM_ATTACKS`.
+8.  Si `FARM_EVENT = True`, configurar `EVENT_NUMBER`.
+9.  Si `FARM_EVENT = False`, configurar `ELITE_CREATURE` si se desea
+    dejar registrado el tipo de criatura.
+10. Verificar que la stamina disponible sea la que se desea gastar.
+11. Verificar que todos los templates PNG correspondan a la interfaz
     actual.
-11. Activar el entorno virtual.
+12. Activar el entorno virtual.
 
 Ejecutar:
 

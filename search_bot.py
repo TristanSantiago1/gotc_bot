@@ -89,14 +89,11 @@ AFTER_GO_TO_DELAY = 3.0
 # SELECCIÓN DE EVENTO
 # ============================================================
 
-# True  -> farmear desde Events y atacar 5 veces por objetivo.
-# False -> usar busqueda directa. En este modo ELITE_CREATURE decide
-#          si se atacan elites 4 veces o criaturas normales 1 vez.
+# True  -> farmear desde Events.
+# False -> usar busqueda directa.
 FARM_EVENT = True
 
-# Solo aplica cuando FARM_EVENT es False.
-# True  -> atacar 4 veces por criatura elite.
-# False -> atacar 1 vez por criatura normal.
+# Marca si la criatura buscada es elite. No cambia la cantidad de ataques.
 ELITE_CREATURE = False
 
 # Evento que queremos farmear, contando de arriba hacia abajo.
@@ -151,17 +148,12 @@ AFTER_ATTACK_DELAY = 1.0
 AFTER_MARCH_DELAY = 1.5
 
 # Cantidad exacta de ataques que debe recibir cada enemigo.
-ATTACKS_PER_ENEMY = 5
+# Aplica sin importar si FARM_EVENT o ELITE_CREATURE estan activos.
+NUM_ATTACKS = 5
 
 
 def attacks_per_enemy():
-    if FARM_EVENT:
-        return ATTACKS_PER_ENEMY
-
-    if ELITE_CREATURE:
-        return 4
-
-    return 1
+    return NUM_ATTACKS
 
 # Ventana que aparece cuando todas las marchas están ocupadas.
 NO_MARCH_TEMPLATE = "no_march.png"
