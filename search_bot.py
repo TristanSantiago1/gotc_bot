@@ -18,6 +18,7 @@ THRESHOLDS = {
     "GO_TO": 0.90,
     "NEXT": 0.90,
     "MOVE_CAMERA": 0.85,
+    "RECOVER_COMPASS": 0.85,
 }
 
 TEMPLATES = {
@@ -25,6 +26,11 @@ TEMPLATES = {
     "GO_TO": "go_to.png",
     "NEXT": "next.png",
     "MOVE_CAMERA": "move_camera.png",
+    "RECOVER_COMPASS": "recover_compass.png",
+}
+
+TEMPLATE_FALLBACKS = {
+    "RECOVER_COMPASS": "restart_compass.png",
 }
 
 # ============================================================
@@ -73,11 +79,18 @@ MAX_MOVES = 40
 # UNKNOWN puede aparecer temporalmente mientras GOTC procesa.
 # Solo consideraremos que hay un problema si permanece así
 # durante este número de segundos consecutivos.
-MAX_UNKNOWN_SECONDS = 15.0
+MAX_UNKNOWN_SECONDS = 10.0
 
 # Tiempo entre capturas cuando estamos esperando que termine
 # una transición.
 UNKNOWN_POLL_INTERVAL = 0.5
+
+# Cantidad máxima de BACK consecutivos para intentar volver
+# a un estado conocido antes de detener el bot.
+MAX_RECOVERY_BACKS = 8
+
+# Espera después de cada BACK de recuperación.
+RECOVERY_BACK_DELAY = 1.0
 
 # Pequeña espera después de mover el mapa.
 AFTER_SWIPE_DELAY = 0.5
@@ -186,6 +199,21 @@ def adb(*args):
     )
 
 
+def keycode_back():
+    """
+    Envía BACK a Android mediante ADB.
+    """
+
+    print("  → KEYCODE_BACK")
+
+    adb(
+        "shell",
+        "input",
+        "keyevent",
+        "KEYCODE_BACK"
+    )
+
+
 def tap(x, y):
     """
     Realiza un tap en coordenadas de la pantalla Android.
@@ -283,7 +311,7 @@ def screenshot():
 
 def load_templates():
     """
-    Carga los tres templates utilizados para reconocer
+    Carga los templates utilizados para reconocer
     el estado de búsqueda.
     """
 
@@ -292,6 +320,19 @@ def load_templates():
     for name, filename in TEMPLATES.items():
 
         image = cv2.imread(filename)
+
+        if image is None and name in TEMPLATE_FALLBACKS:
+
+            fallback = TEMPLATE_FALLBACKS[name]
+
+            print(
+                f"⚠ No pude cargar {filename}. "
+                f"Usando fallback {fallback}."
+            )
+
+            image = cv2.imread(fallback)
+
+            filename = fallback
 
         if image is None:
             raise RuntimeError(
@@ -733,9 +774,11 @@ def detect_state(screen, templates):
 
     Estados posibles:
 
+        IDLE
         GO_TO
         NEXT
         MOVE_CAMERA
+        RECOVER_COMPASS
         UNKNOWN
     """
 
@@ -801,6 +844,94 @@ def detect_state(screen, templates):
         best["confidence"],
         best["position"]
     )
+
+
+def recover_from_unknown(templates):
+    """
+    Intenta volver desde UNKNOWN a un estado conocido.
+
+    Usa BACK para cerrar pantallas superpuestas. Si detecta
+    RECOVER_COMPASS, pulsa donde debe estar la brújula para restaurarla.
+
+    Devuelve:
+        "RECOVERED" -> se volvió a un estado manejable
+        "FAILED"    -> no se pudo recuperar con seguridad
+    """
+
+    print()
+    print("==========================")
+    print(" RECUPERANDO ESTADO")
+    print("==========================")
+    print()
+
+    for attempt in range(MAX_RECOVERY_BACKS):
+
+        print(
+            f"→ Recuperación BACK "
+            f"{attempt + 1}/{MAX_RECOVERY_BACKS}"
+        )
+
+        keycode_back()
+
+        time.sleep(RECOVERY_BACK_DELAY)
+
+        screen = screenshot()
+
+        state, confidence, position = detect_state(
+            screen,
+            templates
+        )
+
+        print(
+            f"RECOVERY ESTADO: {state} "
+            f"| confianza: {confidence:.3f}"
+        )
+
+        if state == "RECOVER_COMPASS":
+
+            print(
+                "✓ Estado RECOVER_COMPASS detectado."
+            )
+            print(
+                "→ Restaurando brújula..."
+            )
+
+            tap(
+                COMPASS_X,
+                COMPASS_Y
+            )
+
+            time.sleep(AFTER_COMPASS_DELAY)
+
+            return "RECOVERED"
+
+        if state != "UNKNOWN":
+
+            print(
+                "✓ Estado conocido recuperado."
+            )
+
+            return "RECOVERED"
+
+    print()
+    print("==========================")
+    print(" ✗ RECUPERACIÓN FALLIDA")
+    print("==========================")
+    print(
+        "No se logró volver a un estado conocido "
+        "con BACK."
+    )
+
+    cv2.imwrite(
+        "debug_recovery_failed.png",
+        screen
+    )
+
+    print(
+        "Captura guardada como debug_recovery_failed.png"
+    )
+
+    return "FAILED"
 
 
 # ============================================================
@@ -1292,6 +1423,33 @@ def run_bot():
                 continue
 
             # ============================================
+            # RECOVER COMPASS
+            # ============================================
+
+            if state == "RECOVER_COMPASS":
+
+                print()
+                print("==========================")
+                print(" RECOVER_COMPASS DETECTADO")
+                print("==========================")
+                print(
+                    "→ Pulsando posición de brújula "
+                    "para restaurar mapa normal..."
+                )
+
+                tap(
+                    COMPASS_X,
+                    COMPASS_Y
+                )
+
+                time.sleep(AFTER_COMPASS_DELAY)
+
+                moves = 0
+                unknown_since = None
+
+                continue
+
+            # ============================================
             # UNKNOWN
             # ============================================
 
@@ -1334,7 +1492,7 @@ def run_bot():
                     )
 
                     print(
-                        "No se realizará ninguna acción."
+                        "Se intentará recuperación automática."
                     )
 
                     cv2.imwrite(
@@ -1350,6 +1508,21 @@ def run_bot():
                     print(
                         "debug_unknown.png"
                     )
+
+                    recovery_result = recover_from_unknown(
+                        templates
+                    )
+
+                    if recovery_result == "RECOVERED":
+
+                        moves = 0
+                        unknown_since = None
+
+                        print(
+                            "→ Volviendo a analizar pantalla..."
+                        )
+
+                        continue
 
                     break
 

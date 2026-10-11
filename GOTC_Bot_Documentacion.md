@@ -25,6 +25,7 @@ El flujo implementado actualmente permite:
     -   se encontró una criatura visible (`NEXT`);
     -   es necesario mover la cámara (`MOVE_CAMERA`);
     -   el juego está en el mapa sin búsqueda (`IDLE`);
+    -   debe restaurarse la brújula (`RECOVER_COMPASS`);
     -   no se reconoce un estado (`UNKNOWN`).
 8.  Mover el mapa siguiendo un patrón en espiral hasta encontrar una
     criatura.
@@ -327,6 +328,22 @@ STOP
 
 No se realizan nuevas búsquedas ni ataques.
 
+### `recover_compass.png`
+
+Representa el botón o icono que aparece cuando el bot necesita restaurar
+la brújula para volver al mapa normal.
+
+Cuando se detecta:
+
+``` text
+RECOVER_COMPASS
+→ tap en la posición configurada de la brújula
+→ volver a analizar pantalla
+```
+
+Si `recover_compass.png` no existe, el bot puede usar
+`restart_compass.png` como fallback.
+
 ------------------------------------------------------------------------
 
 ## 8. Recomendaciones para crear templates
@@ -551,9 +568,11 @@ NUM_ATTACKS = 5
 EVENT_NUMBER = 1
 
 MAX_MOVES = 40
-MAX_UNKNOWN_SECONDS = 15.0
+MAX_UNKNOWN_SECONDS = 10.0
 
 UNKNOWN_POLL_INTERVAL = 0.5
+MAX_RECOVERY_BACKS = 8
+RECOVERY_BACK_DELAY = 1.0
 AFTER_SWIPE_DELAY = 0.5
 AFTER_GO_TO_DELAY = 3.0
 
@@ -638,6 +657,7 @@ GO_TO
 NEXT
 MOVE_CAMERA
 UNKNOWN
+RECOVER_COMPASS
 ```
 
 ### IDLE
@@ -696,7 +716,27 @@ Ningún template conocido supera su umbral.
 Los estados `UNKNOWN` breves se consideran normales porque GOTC puede
 tardar en actualizar la interfaz.
 
-Si persiste demasiado tiempo se genera una captura de depuración.
+Si persiste 10 segundos, se genera una captura de depuración y comienza
+la recuperación automática con `KEYCODE_BACK`.
+
+### RECOVER_COMPASS
+
+Estado usado cuando la interfaz quedó en una pantalla donde la brújula
+normal no está visible, pero existe un botón o icono que permite
+restaurarla.
+
+Acción:
+
+``` text
+RECOVER_COMPASS
+ ↓
+tap en posición de brújula
+ ↓
+volver a detectar estado
+```
+
+El template principal esperado es `recover_compass.png`. Si ese archivo
+no existe, el código puede usar `restart_compass.png` como fallback.
 
 ------------------------------------------------------------------------
 
@@ -904,7 +944,8 @@ IDLE        → iniciar una nueva búsqueda
 GO_TO       → volver a centrar el objetivo
 NEXT        → continuar con el objetivo
 MOVE_CAMERA → continuar la búsqueda
-UNKNOWN     → esperar
+RECOVER_COMPASS → restaurar brújula
+UNKNOWN     → esperar y, si persiste, recuperar con KEYCODE_BACK
 ```
 
 Esto reduce la dependencia de tiempos perfectos en un equipo con
@@ -1036,12 +1077,26 @@ detectar estado
   │     ▼
   │   nueva búsqueda
   │
+  ├── RECOVER_COMPASS
+  │     │
+  │     ▼
+  │   tap en posición de brújula
+  │     │
+  │     └──────────► volver a detectar
+  │
   └── UNKNOWN
         │
         ▼
-      esperar
+      esperar 10s
         │
-        └──────────────► volver a detectar
+        ▼
+      KEYCODE_BACK
+        │
+        ├──────────────► estado conocido: continuar
+        │
+        ├──────────────► RECOVER_COMPASS: restaurar brújula
+        │
+        └──────────────► sin recuperar: repetir hasta límite
 ```
 
 ------------------------------------------------------------------------
@@ -1129,6 +1184,20 @@ El bot puede guardar:
 
 ``` text
 debug_unknown.png
+```
+
+Después de guardar esa captura, intenta recuperarse automáticamente:
+
+``` text
+KEYCODE_BACK
+detectar estado
+repetir hasta encontrar un estado conocido o RECOVER_COMPASS
+```
+
+Si no logra recuperarse dentro del límite configurado, guarda:
+
+``` text
+debug_recovery_failed.png
 ```
 
 ### ATTACK no encontrado
