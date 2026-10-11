@@ -229,6 +229,7 @@ Una estructura aproximada del proyecto es:
 ``` text
 gotc-bot/
 ├── search_bot.py
+├── gotc_config.py
 ├── test_attack.py
 ├── test_capture.py
 ├── test_input.py
@@ -241,8 +242,11 @@ gotc-bot/
 ├── march.png
 ├── no_march.png
 ├── stop.png
+├── restart_compass.png
 └── venv/
 ```
+
+`gotc_config.py` concentra las constantes editables del bot.
 
 Los scripts de prueba no son obligatorios para ejecutar el bot final,
 pero son útiles para recalibrar o diagnosticar problemas.
@@ -558,16 +562,35 @@ criatura.
 
 ## 13. Configuraciones principales del bot
 
-Ejemplo conceptual de configuración:
+La configuración editable vive en:
+
+``` text
+gotc_config.py
+```
+
+`search_bot.py` solo importa esos valores como referencia. Para cambiar
+el comportamiento normal del bot, edita `gotc_config.py`.
+
+El archivo está organizado por categorías. Arriba están los valores que
+normalmente se cambian con más frecuencia:
 
 ``` python
+NUM_ATTACKS = 5
+
 FARM_EVENT = True
 ELITE_CREATURE = False
 
-NUM_ATTACKS = 5
 EVENT_NUMBER = 1
 
 MAX_MOVES = 40
+```
+
+Después aparecen los grupos de recuperación, navegación, ataque,
+templates, movimiento, notificaciones y sistema.
+
+Ejemplo de otros valores configurables:
+
+``` python
 MAX_UNKNOWN_SECONDS = 10.0
 
 UNKNOWN_POLL_INTERVAL = 0.5
@@ -1291,7 +1314,6 @@ Algunas extensiones naturales del proyecto son:
 -   detectar `STOP`, `NO_MARCH` y `MARCH` simultáneamente durante una
     ventana de tiempo;
 -   reemplazar más coordenadas absolutas por detección visual;
--   archivo externo de configuración (`config.json`, TOML o YAML);
 -   estadísticas de sesión;
 -   contador total de criaturas;
 -   contador total de ataques;
